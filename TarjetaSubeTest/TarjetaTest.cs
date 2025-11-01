@@ -156,7 +156,7 @@ namespace TarjetaSubeTest
         public void TestCargarSuperandoLimite()
         {
             tarjeta.Cargar(30000);
-            tarjeta.Cargar(10000); 
+            tarjeta.Cargar(10000); // Total: 40000
             
             bool resultado = tarjeta.Cargar(2000); // Intentar superar el límite
             Assert.IsFalse(resultado);
@@ -241,14 +241,14 @@ namespace TarjetaSubeTest
             tarjeta.Cargar(3000);
             bool resultado = tarjeta.PagarPasaje();
             Assert.IsTrue(resultado);
-            Assert.AreEqual(1420m, tarjeta.Saldo); 
+            Assert.AreEqual(1420m, tarjeta.Saldo); // 3000 - 1580
         }
 
         [Test]
         public void TestPagarPasajeSinSaldoSuficiente()
         {
             tarjeta.Cargar(2000);
-            tarjeta.Descontar(1000); 
+            tarjeta.Descontar(1000); // Queda 1000
             bool resultado = tarjeta.PagarPasaje();
             Assert.IsFalse(resultado);
             Assert.AreEqual(1000m, tarjeta.Saldo);
@@ -258,7 +258,7 @@ namespace TarjetaSubeTest
         public void TestPagarPasajeConSaldoExacto()
         {
             tarjeta.Cargar(2000);
-            tarjeta.Descontar(420);
+            tarjeta.Descontar(420); // Queda exactamente 1580
             bool resultado = tarjeta.PagarPasaje();
             Assert.IsTrue(resultado);
             Assert.AreEqual(0m, tarjeta.Saldo);
