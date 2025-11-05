@@ -655,10 +655,7 @@
       },
       "TarjetaSube/1.0.0": {
         "runtime": {
-          "TarjetaSube.dll": {
-            "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.0.0"
-          }
+          "TarjetaSube.dll": {}
         }
       }
     }
