@@ -6,6 +6,7 @@ public class Tarjeta
     protected decimal saldo;
     protected decimal saldoPendiente;
     private const decimal LIMITE_SALDO = 56000m;
+    private const decimal LIMITE_SALDO_NEGATIVO = -1200m;
     private const decimal TARIFA_BASICA = 1580m;
     protected DateTime ultimoViaje;
     protected int viajesHoy;
@@ -45,16 +46,48 @@ public class Tarjeta
         if (!montosAceptados.Contains(monto))
             return false;
 
-        decimal espacioDisponible = LIMITE_SALDO - saldo;
+        // Si hay saldo negativo, primero se descuenta de la carga
+        if (saldo < 0)
+        {
+            decimal deuda = Math.Abs(saldo);
+            if (monto <= deuda)
+            {
+                // La carga no alcanza para salir del negativo
+                saldo += monto;
+                return true;
+            }
+            else
+            {
+                // La carga supera la deuda
+                decimal restante = monto - deuda;
+                saldo = 0m;
+                
+                // Ahora cargar el restante normalmente
+                decimal espacioDisponible = LIMITE_SALDO - saldo;
+                if (espacioDisponible >= restante)
+                {
+                    saldo += restante;
+                }
+                else
+                {
+                    saldo = LIMITE_SALDO;
+                    saldoPendiente += (restante - espacioDisponible);
+                }
+                return true;
+            }
+        }
 
-        if (espacioDisponible >= monto)
+        // Carga normal cuando no hay saldo negativo
+        decimal espacio = LIMITE_SALDO - saldo;
+
+        if (espacio >= monto)
         {
             saldo += monto;
         }
         else
         {
             saldo = LIMITE_SALDO;
-            saldoPendiente += (monto - espacioDisponible);
+            saldoPendiente += (monto - espacio);
         }
 
         return true;
@@ -81,7 +114,9 @@ public class Tarjeta
 
     public virtual bool Descontar(decimal monto)
     {
-        if (saldo < monto)
+        // Permitir saldo negativo hasta el límite SOLO para tarjetas normales
+        // Las subclases pueden override este comportamiento
+        if (saldo - monto < LIMITE_SALDO_NEGATIVO)
             return false;
 
         saldo -= monto;

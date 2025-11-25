@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "gh6dHPjzQuk=",
+  "dgSpecHash": "4cAa2ko3/BgX1gV2H1Ch9ztR4EqkWazJgkBuXLiV3DKGHMr4I7lWiUfQ8CK50VNUl1vCdYTpJhrrljp+zdwRZQ==",
   "success": true,
-  "projectFilePath": "C:\\Users\\PC\\Desktop\\6to\\TrabajoTarjeta2025YaquintoLuchini\\TrabajoTarjeta2025YaquintoLuchini\\TarjetaSubeTest\\TarjetaSubeTest.csproj",
+  "projectFilePath": "C:\\Users\\PC\\Desktop\\TrabajoTarjeta2025YaquintoLuchini\\TarjetaSubeTest\\TarjetaSubeTest.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\PC\\.nuget\\packages\\coverlet.collector\\3.1.2\\coverlet.collector.3.1.2.nupkg.sha512",
     "C:\\Users\\PC\\.nuget\\packages\\coverlet.msbuild\\3.1.2\\coverlet.msbuild.3.1.2.nupkg.sha512",

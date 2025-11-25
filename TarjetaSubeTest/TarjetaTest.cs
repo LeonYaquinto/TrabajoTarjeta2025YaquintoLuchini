@@ -269,16 +269,17 @@ namespace TarjetaTests
         }
 
         [Test]
-        public void Test_Descontar_ConSaldoInsuficiente_RetornaFalse()
+        public void Test_Descontar_ConSaldoInsuficiente_PermiteSaldoNegativo()
         {
-
+            // MODIFICADO: Ahora permite saldo negativo hasta -1200
             Tarjeta tarjeta = new Tarjeta();
             tarjeta.Cargar(2000);
 
-            bool resultado = tarjeta.Descontar(3000);
+            // Intentar descontar 2500 (quedaría en -500, que está dentro del límite)
+            bool resultado = tarjeta.Descontar(2500);
 
-            Assert.IsFalse(resultado);
-            Assert.AreEqual(2000m, tarjeta.Saldo, "El saldo no debería cambiar");
+            Assert.IsTrue(resultado, "Debe permitir saldo negativo hasta -1200");
+            Assert.AreEqual(-500m, tarjeta.Saldo, "El saldo debe quedar en -500");
         }
 
         [Test]
@@ -320,16 +321,18 @@ namespace TarjetaTests
         }
 
         [Test]
-        public void Test_PagarPasaje_ConSaldoInsuficiente_RetornaFalse()
+        public void Test_PagarPasaje_ConSaldoInsuficiente_PermiteSaldoNegativo()
         {
+            // MODIFICADO: Ahora permite saldo negativo hasta -1200
             Tarjeta tarjeta = new Tarjeta();
             tarjeta.Cargar(2000);
             tarjeta.PagarPasaje(); // Queda con 420
 
+            // Segundo viaje: 420 - 1580 = -1160 (dentro del límite de -1200)
             bool resultado = tarjeta.PagarPasaje();
 
-            Assert.IsFalse(resultado);
-            Assert.AreEqual(420m, tarjeta.Saldo);
+            Assert.IsTrue(resultado, "Debe permitir saldo negativo hasta -1200");
+            Assert.AreEqual(-1160m, tarjeta.Saldo, "El saldo debe quedar en -1160");
         }
 
         [Test]
