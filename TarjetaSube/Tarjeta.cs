@@ -8,11 +8,22 @@ public class Tarjeta
     private const decimal LIMITE_SALDO = 56000m;
     private const decimal LIMITE_SALDO_NEGATIVO = -1200m;
     private const decimal TARIFA_BASICA = 1580m;
+    private const decimal TARIFA_INTERURBANA = 3000m;
     protected DateTime ultimoViaje;
     protected int viajesHoy;
     protected DateTime fechaUltimoDia;
     private static int contadorId = 0;
     private int id;
+
+    // Boleto de uso frecuente (solo tarjetas normales)
+    private int viajesEnMes;
+    private DateTime mesActual;
+
+    // Trasbordos
+    protected DateTime ultimoViajeParaTransbordo;
+    protected string ultimaLineaUsada;
+    protected bool esTransbordo;
+    protected decimal ultimaTarifaCobrada;
 
     public decimal Saldo
     {
@@ -29,6 +40,16 @@ public class Tarjeta
         get { return id; }
     }
 
+    public bool EsTransbordo
+    {
+        get { return esTransbordo; }
+    }
+
+    public decimal UltimaTarifaCobrada
+    {
+        get { return ultimaTarifaCobrada; }
+    }
+
     public Tarjeta()
     {
         saldo = 0m;
@@ -37,6 +58,12 @@ public class Tarjeta
         viajesHoy = 0;
         fechaUltimoDia = DateTime.MinValue;
         id = ++contadorId;
+        viajesEnMes = 0;
+        mesActual = DateTime.MinValue;
+        ultimoViajeParaTransbordo = DateTime.MinValue;
+        ultimaLineaUsada = "";
+        esTransbordo = false;
+        ultimaTarifaCobrada = 0m;
     }
 
     public virtual bool Cargar(decimal monto)
@@ -52,17 +79,14 @@ public class Tarjeta
             decimal deuda = Math.Abs(saldo);
             if (monto <= deuda)
             {
-                // La carga no alcanza para salir del negativo
                 saldo += monto;
                 return true;
             }
             else
             {
-                // La carga supera la deuda
                 decimal restante = monto - deuda;
                 saldo = 0m;
                 
-                // Ahora cargar el restante normalmente
                 decimal espacioDisponible = LIMITE_SALDO - saldo;
                 if (espacioDisponible >= restante)
                 {
@@ -115,7 +139,6 @@ public class Tarjeta
     public virtual bool Descontar(decimal monto)
     {
         // Permitir saldo negativo hasta el límite SOLO para tarjetas normales
-        // Las subclases pueden override este comportamiento
         if (saldo - monto < LIMITE_SALDO_NEGATIVO)
             return false;
 
@@ -126,22 +149,130 @@ public class Tarjeta
 
     public virtual bool PagarPasaje()
     {
-        bool resultado = Descontar(TARIFA_BASICA);
+        return PagarPasaje("", false);
+    }
+
+    public virtual bool PagarPasaje(string linea, bool esInterurbano)
+    {
+        ActualizarContadorViajes();
+        
+        // Verificar si es trasbordo
+        bool esTrasbordo = VerificarTransbordo(linea);
+        
+        decimal tarifaAPagar;
+        if (esTrasbordo)
+        {
+            tarifaAPagar = 0m; // Trasbordo gratuito
+            esTransbordo = true;
+        }
+        else
+        {
+            if (esInterurbano)
+            {
+                tarifaAPagar = ObtenerTarifaInterurbana();
+            }
+            else
+            {
+                tarifaAPagar = ObtenerTarifa();
+            }
+            esTransbordo = false;
+        }
+
+        bool resultado = Descontar(tarifaAPagar);
         if (resultado)
         {
             ultimoViaje = DateTime.Now;
+            ultimoViajeParaTransbordo = DateTime.Now;
+            ultimaLineaUsada = linea;
+            viajesHoy++;
+            ultimaTarifaCobrada = tarifaAPagar;
+            
+            // Incrementar contador mensual DESPUÉS de pagar (para el próximo viaje)
+            if (this.GetType() == typeof(Tarjeta) && !esTrasbordo)
+            {
+                ActualizarContadorMensual();
+                viajesEnMes++;
+            }
         }
         return resultado;
     }
 
+    protected bool VerificarTransbordo(string lineaActual)
+    {
+        // Trasbordos solo de lunes a sábado de 7:00 a 22:00
+        DateTime ahora = DateTime.Now;
+        
+        if (ahora.DayOfWeek == DayOfWeek.Sunday)
+            return false;
+
+        if (ahora.Hour < 7 || ahora.Hour >= 22)
+            return false;
+
+        // Debe haber un viaje anterior
+        if (ultimoViajeParaTransbordo == DateTime.MinValue)
+            return false;
+
+        // Debe ser dentro de 1 hora
+        TimeSpan tiempoTranscurrido = ahora - ultimoViajeParaTransbordo;
+        if (tiempoTranscurrido.TotalMinutes > 60)
+            return false;
+
+        // Debe ser en línea diferente
+        if (string.IsNullOrEmpty(lineaActual) || string.IsNullOrEmpty(ultimaLineaUsada))
+            return false;
+
+        if (lineaActual == ultimaLineaUsada)
+            return false;
+
+        return true;
+    }
+
     public virtual decimal ObtenerTarifa()
     {
+        // Boleto de uso frecuente (solo para tarjetas normales)
+        if (this.GetType() == typeof(Tarjeta))
+        {
+            ActualizarContadorMensual();
+            
+            // El contador se incrementa DESPUÉS del viaje
+            // Por eso, el viaje 30 tendrá viajesEnMes=29
+            if (viajesEnMes >= 29 && viajesEnMes < 59)
+            {
+                return TARIFA_BASICA * 0.8m; // 20% descuento (viajes 30-59)
+            }
+            else if (viajesEnMes >= 59 && viajesEnMes < 80)
+            {
+                return TARIFA_BASICA * 0.75m; // 25% descuento (viajes 60-80)
+            }
+        }
+        
         return TARIFA_BASICA;
+    }
+
+    public virtual decimal ObtenerTarifaInterurbana()
+    {
+        return TARIFA_INTERURBANA;
     }
 
     public virtual string ObtenerTipo()
     {
         return "Normal";
+    }
+
+    public virtual bool PuedePagarEnHorario()
+    {
+        // Tarjetas normales pueden pagar siempre
+        return true;
+    }
+
+    public virtual bool PuedeUsarSaldoNegativo(decimal monto)
+    {
+        // Solo tarjetas normales pueden usar saldo negativo
+        if (this.GetType() == typeof(Tarjeta))
+        {
+            return (saldo - monto >= LIMITE_SALDO_NEGATIVO);
+        }
+        return false;
     }
 
     protected void ActualizarContadorViajes()
@@ -151,6 +282,25 @@ public class Tarjeta
         {
             viajesHoy = 0;
             fechaUltimoDia = ahora;
+        }
+    }
+
+    protected void ActualizarContadorMensual()
+    {
+        DateTime ahora = DateTime.Now;
+        if (mesActual.Year != ahora.Year || mesActual.Month != ahora.Month)
+        {
+            viajesEnMes = 0;
+            mesActual = ahora;
+        }
+    }
+
+    public int ViajesEnMes
+    {
+        get 
+        { 
+            ActualizarContadorMensual();
+            return viajesEnMes; 
         }
     }
 }

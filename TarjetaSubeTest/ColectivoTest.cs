@@ -34,14 +34,17 @@ namespace TarjetaSubeTest
         }
 
         [Test]
-        public void TestPagarConSaldoInsuficiente()
+        public void TestPagarConSaldoInsuficiente_PermiteSaldoNegativo()
         {
+            // MODIFICADO: Ahora permite saldo negativo hasta -1200
             Tarjeta tarjeta = new Tarjeta();
             tarjeta.Cargar(2000);
-            tarjeta.Descontar(500); 
+            tarjeta.Descontar(500); // Queda 1500
 
             Boleto boleto = colectivo.PagarCon(tarjeta);
-            Assert.IsNull(boleto);
+            // 1500 - 1580 = -80 (dentro del límite de -1200)
+            Assert.IsNotNull(boleto, "Debe permitir saldo negativo hasta -1200");
+            Assert.AreEqual(-80m, boleto.SaldoRestante);
         }
 
         [Test]
