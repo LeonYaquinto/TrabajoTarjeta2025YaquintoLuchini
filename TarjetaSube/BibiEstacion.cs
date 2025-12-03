@@ -9,15 +9,13 @@ public class BibiEstacion
     
     private string nombre;
     private Dictionary<int, DateTime> retirosPorTarjeta; // ID tarjeta -> fecha/hora de retiro
-    private Dictionary<int, int> multasPendientesPorTarjeta; // ID tarjeta -> cantidad de multas acumuladas en el día
-    private Dictionary<int, DateTime> ultimoPagoPorTarjeta; // ID tarjeta -> fecha del último pago (para control diario)
+    private Dictionary<int, int> multasPendientesPorTarjeta; // ID tarjeta -> cantidad de multas acumuladas (se pagan en el próximo retiro)
 
     public BibiEstacion(string nombre)
     {
         this.nombre = nombre;
         this.retirosPorTarjeta = new Dictionary<int, DateTime>();
         this.multasPendientesPorTarjeta = new Dictionary<int, int>();
-        this.ultimoPagoPorTarjeta = new Dictionary<int, DateTime>();
     }
 
     public string Nombre
@@ -44,9 +42,6 @@ public class BibiEstacion
 
         // Registrar el retiro
         retirosPorTarjeta[tarjeta.Id] = DateTime.Now;
-        
-        // Registrar el pago del día
-        ultimoPagoPorTarjeta[tarjeta.Id] = DateTime.Now;
         
         // Limpiar las multas después de pagarlas
         if (multasPendientesPorTarjeta.ContainsKey(tarjeta.Id))
@@ -77,9 +72,7 @@ public class BibiEstacion
         // Verificar si excedió el tiempo máximo
         if (minutosUsados > TIEMPO_MAXIMO_MINUTOS)
         {
-            // Acumular multa
-            ActualizarMultasDiarias(tarjeta.Id);
-            
+            // Acumular multa (se pagará en el próximo retiro)
             if (!multasPendientesPorTarjeta.ContainsKey(tarjeta.Id))
             {
                 multasPendientesPorTarjeta[tarjeta.Id] = 0;
@@ -93,14 +86,12 @@ public class BibiEstacion
         return true;
     }
 
-    // Calcular el monto a pagar (tarifa + multas pendientes)
+    // Calcular el monto a pagar (tarifa + multas pendientes acumuladas)
     private decimal CalcularMontoAPagar(Tarjeta tarjeta)
     {
-        ActualizarMultasDiarias(tarjeta.Id);
-        
         decimal monto = TARIFA_DIARIA;
         
-        // Agregar multas pendientes
+        // Agregar TODAS las multas pendientes (sin resetear por cambio de día)
         if (multasPendientesPorTarjeta.ContainsKey(tarjeta.Id))
         {
             int cantidadMultas = multasPendientesPorTarjeta[tarjeta.Id];
@@ -110,33 +101,11 @@ public class BibiEstacion
         return monto;
     }
 
-    // Actualizar multas diarias (resetear si es un nuevo día)
-    private void ActualizarMultasDiarias(int idTarjeta)
-    {
-        DateTime ahora = DateTime.Now;
-        
-        if (ultimoPagoPorTarjeta.ContainsKey(idTarjeta))
-        {
-            DateTime ultimoPago = ultimoPagoPorTarjeta[idTarjeta];
-            
-            // Si es un nuevo día, resetear las multas
-            if (ultimoPago.Date != ahora.Date)
-            {
-                if (multasPendientesPorTarjeta.ContainsKey(idTarjeta))
-                {
-                    multasPendientesPorTarjeta[idTarjeta] = 0;
-                }
-            }
-        }
-    }
-
     // Métodos públicos para consultar estado
     public int ObtenerMultasPendientes(Tarjeta tarjeta)
     {
         if (tarjeta == null)
             return 0;
-
-        ActualizarMultasDiarias(tarjeta.Id);
         
         if (multasPendientesPorTarjeta.ContainsKey(tarjeta.Id))
         {
